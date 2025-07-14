@@ -1,0 +1,537 @@
+import json
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.optimizers import SGD
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+import nltk
+import random
+import pickle
+
+nltk.download("punkt")
+nltk.download("wordnet")
+nltk.download('punkt_tab')
+
+data = {
+  "intents": [
+    {
+            "tag": "school_hours", #tag 1
+            "patterns": [
+                "What time does school start?","When do classes begin?",
+                "What is the school opening time?", "What hour does school start?", 
+                "When do we begin our lessons?", "Can you tell me when school starts?",
+                "When should I be at school?", "Is there a specific time for school to begin?", 
+                "What's the morning schedule?", "When do students arrive at school?", 
+                "Tell me the class start time", "When does the bell ring in the morning?",
+                "Is school starting early?", "What time do I report to school?", 
+                "Do classes start at 7:30?", "When does homeroom start?",
+                "When should I be in the classroom?", "Does school begin before 8?",
+                "What's the start time for morning class?", "Please tell me when the school day begins"
+            ],
+            "responses": [
+                "School starts at 7:30 AM.", "Classes begin at 7:30 in the morning.", 
+                "Be in school by 7:30 AM.", "The first class starts at 7:30 AM.", 
+                "Students are expected by 7:15 AM.", "School begins sharply at 7:30 AM.",
+                "7:30 AM is the official start of class.", "Morning bell rings at 7:25 AM.", 
+                "Arrive before 7:30 to avoid being late.", "Make sure you're on campus by 7:15 AM.", 
+                "Lessons start at 7:30 AM.", "Morning classes kick off at 7:30.",
+                "School opens its gates at 7:00 AM.", "The flag ceremony starts around 7:20 AM.", 
+                "Your presence is needed by 7:30.", "We start each day at 7:30 AM.", 
+                "Instruction begins at 7:30.", "Classes officially start at 7:30 sharp.",
+                "Please arrive before 7:30.", "School officially begins at 7:30 AM daily."
+            ]
+        },
+        {
+            "tag": "enrollment_process", #tag 2
+            "patterns": [
+                "How can I enroll?", "What's the enrollment process?",
+                "Where do I register?", "Can I enroll online?",
+                "How do I sign up for school?", "What are the steps to enroll?",
+                "How to apply for enrollment?", "Where is the enrollment office?",
+                "Do I need to go in person?", "Can I enroll this week?",
+                "How does school enrollment work?", "Tell me how to register.",
+                "When is enrollment open?", "Is enrollment still ongoing?",
+                "What's needed to register?", "What do I do to become a student?",
+                "Is online registration available?", "Where should I submit my forms?",
+                "Can parents enroll students online?", "How do I join the school?"
+            ],
+            "responses": [
+                "Visit our website to register online.", "Go to the registrar’s office to enroll.",
+                "Online and in-person enrollment are both available.", "Check the school portal for the enrollment link.",
+                "Bring your documents to the school registrar.", "You can enroll by filling out a form online.",
+                "Start by submitting your requirements.", "Enrollment details are on the school website.",
+                "Ask the front desk for help with enrollment.", "Parents can also complete enrollment for students.",
+                "Enrollment is open from June to August.", "You may also call the school office for steps.",
+                "Submit your documents through email or in person.", "Get the registration form from the guard or website.",
+                "The registration desk is in the admin building.", "Please bring all required papers when you visit.",
+                "There is no entrance exam for enrollment.", "First, create a student account online.",
+                "Download and fill up the enrollment form.", "Attend the orientation after registering."
+            ]
+        },
+        {
+            "tag": "exam_dates", #tag 3
+            "patterns": [
+                "When are the exams?", "What's the exam schedule?",
+                "When are midterms?", "When is the final exam?",
+                "Do we have exams this week?", "Are there monthly tests?",
+                "Is there a quarterly exam?", "When are our tests?",
+                "Can I know the exam dates?", "Where is the exam schedule posted?",
+                "When will exams be announced?", "Do exams happen every month?",
+                "How long do exams last?", "Are we reviewing for exams yet?",
+                "Tell me about exam week.", "Do we take exams in all subjects?",
+                "What’s the exam coverage?", "When does exam week start?",
+                "Do exams take the whole day?", "Is there early dismissal during exams?"
+            ],
+            "responses": [
+                "Exams are usually held during the last week of each quarter.", "Check the school calendar for specific exam dates.",
+                "Midterms are typically held in the 8th week of the term.", "Final exams take place in March and October.",
+                "Exam schedules are posted on the bulletin board.", "Ask your teacher for the subject-specific exam dates.",
+                "All exams are listed on the school website.", "Advisers distribute exam reminders ahead of time.",
+                "Each quarter includes one major exam week.", "Exams are announced at least a week in advance.",
+                "You can check your LMS for updated exam info.", "We review for exams the week before.",
+                "Some subjects give projects instead of exams.", "Dismissal is usually earlier during exams.",
+                "The principal announces exam days in advance.", "Exams last between 30 to 60 minutes per subject.",
+                "Make sure to bring all needed materials.", "No make-up exams without a valid excuse.",
+                "Reviewers are given by teachers before exams.", "Only essential subjects may have exams."
+            ]
+        },
+        {
+            "tag": "tuition_fees", #tag 4
+            "patterns": [
+                "How much is the tuition fee?", "What is the cost of tuition?",
+                "Can you tell me the school fees?", "How much do I have to pay?",
+                "Are there payment plans?", "Do I pay monthly or yearly?",
+                "What is the fee for new students?", "What's the total tuition?",
+                "Do we have to pay for books?", "Is there a down payment?",
+                "Are uniforms included in tuition?", "What's the registration fee?",
+                "Is there a discount for siblings?", "Do we pay per semester?",
+                "What is the full tuition amount?", "Where can I find the tuition info?",
+                "What are the other school charges?", "Are there lab or material fees?",
+                "How much are the miscellaneous fees?", "Can I see the latest tuition rate?"
+            ],
+            "responses": [
+                "Tuition varies depending on the grade level.", "Please check the registrar or website for the latest fee structure.",
+                "The annual tuition ranges from ₱20,000 to ₱40,000.", "Payment options include monthly or per semester.",
+                "There is a one-time registration fee.", "Books and uniforms are not included in tuition.",
+                "Miscellaneous fees cover labs, ID, and insurance.", "Siblings may be eligible for a tuition discount.",
+                "You can request a payment breakdown from the office.", "Installment plans are available for tuition.",
+                "Scholarships may reduce your tuition cost.", "Contact the finance office for payment plans.",
+                "Down payments are usually 30% of the full amount.", "Tuition fees are due at the start of the semester.",
+                "We provide a tuition breakdown upon enrollment.", "There’s a ₱500 discount for early payments.",
+                "Lab and PE fees are charged separately.", "Uniforms and books are paid at the bookstore.",
+                "Ask the registrar for a complete fee matrix.", "All fees must be paid before taking final exams."
+            ]
+        },
+        {
+            "tag": "school_uniform", #tag 5
+            "patterns": [
+                  "Do we need to wear uniforms?", "What is the school uniform?",
+                  "Are uniforms required?", "Is there a dress code?",
+                  "When do we wear PE uniforms?", "Are Fridays in uniform too?",
+                  "What color is the school uniform?", "Is the uniform the same for all grades?",
+                  "Do we need IDs with uniforms?", "Where can we buy uniforms?",
+                  "Is the uniform available at school?", "Can I wear jeans to school?",
+                  "Do we wear shoes or slippers?", "Is the PE uniform different?",
+                  "What should I wear to class?", "Are accessories allowed with uniform?",
+                  "Can I wear a hoodie over my uniform?", "Is the school strict about uniforms?",
+                  "What happens if I forget my uniform?", "Can I wear a jacket in class?"
+            ],
+            "responses": [
+                "Yes, wearing the school uniform is mandatory.", "Students must wear uniforms from Monday to Thursday.",
+                "PE uniforms are worn only on PE days.", "The uniform consists of a white polo and navy pants/skirt.",
+                "School ID must be worn with the uniform.", "On Fridays, casual wear is allowed unless there's a special event.",
+                "You can buy the official uniform at the school store.", "Wearing slippers is not allowed.",
+                "Hoodies may be worn outside of class only.", "Uniform must be clean and presentable at all times.",
+                "PE uniform includes a t-shirt and jogging pants.", "Please follow the uniform guidelines in the student handbook.",
+                "Lost uniforms must be replaced at your own expense.", "Jackets are allowed if it's cold, but uniform must be visible.",
+                "No ripped jeans or casual clothes during weekdays.", "Uniform inspections are done weekly.",
+                "Uniforms must be complete with belt and ID.", "You may borrow a spare uniform from the clinic if needed.",
+                "Each grade has a slight variation in uniform details.", "Black leather shoes are required with the daily uniform."
+            ]
+        },
+        {
+            "tag": "school_holidays", #tag 6
+            "patterns": [
+                "When are the school holidays?", "Do we have class this Monday?",
+                "Is there school during Holy Week?", "What holidays does the school observe?",
+                "Are we off for Christmas?", "Is there a break in April?",
+                "What’s the next school holiday?", "Do we get a semestral break?",
+                "Are weekends counted as holidays?", "When is the school break?",
+                "Do we have a summer break?", "Will we have class on Independence Day?",
+                "Is Friday a holiday?", "When does the school close for the year?",
+                "What are the long weekends?", "Can I see the holiday calendar?",
+                "Is the school open on holidays?", "Do we celebrate National Heroes Day?",
+                "Do we follow the DepEd calendar?", "Is Monday a special non-working holiday?"
+            ],
+            "responses": [
+                "We follow the official DepEd school calendar for holidays.", "Christmas break starts mid-December and ends early January.",
+                "There is no class during public and national holidays.", "Summer break begins in April and ends in June.",
+                "Semestral breaks occur in October.", "The school is closed during Holy Week.",
+                "Check the school calendar for updated holiday info.", "There are no classes on legal holidays.",
+                "Announcements are posted on the website before each break.", "You will be notified ahead of time about long weekends.",
+                "We observe all national non-working holidays.", "Public holidays may include Independence Day and Rizal Day.",
+                "Long weekends vary depending on official declarations.", "Holidays are marked on your student planner.",
+                "The principal announces breaks in advance.", "Advisers will post reminders about no-class days.",
+                "Holidays may change due to national announcements.", "Class resumes after the declared break ends.",
+                "The school does not operate during red alerts or storms.", "Local holidays are also observed."
+            ]
+        },
+        {
+            "tag": "contact_info", #tag 7
+            "patterns": [
+                "How can I contact the school?", "What is the school's phone number?",
+                "Can I email the school?", "What is the official email?",
+                "How do I call the office?", "Can I get in touch with the principal?",
+                "Is there a hotline for parents?", "Who can I contact for enrollment?",
+                "Can I message the school on Facebook?", "What is your Viber number?",
+                "Can I contact via SMS?", "How do I reach the school nurse?",
+                "Is there a guidance counselor hotline?", "What number can I call for questions?",
+                "Where can I send documents?", "Is there a contact form online?",
+                "Can I call the registrar directly?", "Who do I talk to about tuition?",
+                "How do I update my contact details?", "Where do I find contact info?"
+            ],
+            "responses": [
+                "You can reach the school at (123) 456-7890.", "Email us at info@school.edu for inquiries.",
+                "Visit our website’s contact page for more details.", "Our official Facebook page is SchoolNameOfficial.",
+                "For enrollment, email admissions@school.edu.", "You may call the principal's office at local 101.",
+                "We respond to messages during office hours only.", "Parents can call the parent liaison officer.",
+                "Use our website form to submit questions.", "Contact the school nurse via nurse@school.edu.",
+                "For payments, call the finance office at local 202.", "You can message us on Viber during school hours.",
+                "Send documents to registrar@school.edu.", "We post updates on our Facebook page.",
+                "SMS updates are sent to your registered number.", "Please update your contact details in the office.",
+                "Direct all academic queries to your adviser.", "Visit the guidance office for student concerns.",
+                "Contact forms are available online and in print.", "Our hotlines are available 8 AM to 5 PM."
+            ]
+        },
+        {
+            "tag": "student_requirements", #tag 8
+            "patterns": [
+                "What are the requirements for enrollment?", "What documents do I need to submit?",
+                "Do I need a birth certificate?", "What is needed for new students?",
+                "Can I enroll without my report card?", "Do I need a medical certificate?",
+                "What are the student requirements?", "What should I bring when enrolling?",
+                "Is a photo ID required?", "Are there any forms I need to fill?",
+                "Where can I get the enrollment checklist?", "What if I lost my card?",
+                "Do I need my previous school records?", "Can I email my requirements?",
+                "Do transferees need more papers?", "Are there special forms for Grade 7?",
+                "Is parent ID needed too?", "Do I need to bring my school ID?",
+                "Can I use a photocopy of my birth certificate?", "Is barangay clearance required?"
+            ],
+            "responses": [
+                "Yes, a PSA birth certificate is required.", "Bring your latest report card and 2x2 photos.",
+                "A filled-out registration form is needed.", "You must also submit your medical clearance.",
+                "Proof of residency is required for some students.", "Transferees should provide transfer credentials.",
+                "Photocopies are accepted with the originals for verification.", "Barangay clearance may be requested for new students.",
+                "Submit your school ID or any valid ID.", "Parent or guardian's ID may be needed during enrollment.",
+                "You can download the checklist from the website.", "A Form 138 is required for enrollment.",
+                "Grade 7 students must take a placement test.", "Lost cards must be declared with an affidavit.",
+                "Email submissions are allowed for initial screening.", "Medical forms are issued by the school nurse.",
+                "The registrar will help if documents are incomplete.", "Make sure to fill up the registration form fully.",
+                "Requirements vary slightly by grade level.", "For complete requirements, visit the school office."
+            ]
+        },
+        {
+            "tag": "library_services", #tag 9
+            "patterns": [
+                "Can I borrow books from the library?", "What are the library hours?",
+                "Is the library open during lunch?", "Do I need an ID to borrow books?",
+                "How many books can I borrow?", "Can I study in the library?",
+                "Are there computers in the library?", "When does the library open?",
+                "Is the library open on weekends?", "Can we print or photocopy at the library?",
+                "Do we have e-books available?", "Where is the library located?",
+                "Can I use the library for group study?", "How long can I borrow a book?",
+                "Are there reference materials?", "Is the library air-conditioned?",
+                "Can I donate books to the library?", "Is Wi-Fi available in the library?",
+                "Who manages the school library?", "Are comic books available in the library?"
+            ],
+            "responses": [
+                "Yes, you can borrow up to 3 books at a time.", "Library hours are from 8:00 AM to 5:00 PM.",
+                "You must present your school ID to borrow books.", "The library is open during lunch for reading only.",
+                "Computer access is available for research purposes.", "E-books can be accessed via the student portal.",
+                "Group study is allowed in the discussion area.", "Late returns will be fined ₱5 per day.",
+                "Photocopying is available for academic materials.", "The library is closed on weekends and holidays.",
+                "The librarian is Ms. Cruz—ask her for help.", "Reference books cannot be taken home.",
+                "Wi-Fi is available inside the library.", "Donations are accepted—see the librarian.",
+                "Borrowing period is up to 7 days.", "Renewals can be made online or in person.",
+                "Comic books and magazines are available.", "We follow silence and order policies in the library.",
+                "The library is located on the second floor.", "You may reserve a seat during exam week."
+            ]
+        },
+        {
+            "tag": "guidance_office", #tag 10
+            "patterns": [
+                "How do I visit the guidance counselor?", "Where is the guidance office?",
+                "Can I talk to someone about my problems?", "Do I need an appointment for counseling?",
+                "Who is the school counselor?", "Is the guidance office open today?",
+                "What services does the guidance office offer?", "Can I request a one-on-one session?",
+                "Where can I report bullying?", "Is the guidance office confidential?",
+                "Can parents talk to the counselor too?", "Do I need a pass to go to guidance?",
+                "Can I visit during recess?", "How do I schedule a counseling session?",
+                "Can I talk to guidance about grades?", "Does the guidance office help with careers?",
+                "Are there peer support groups?", "Is guidance only for misbehaving students?",
+                "Can I get help with stress from guidance?", "Can I speak to guidance without my teacher?"
+            ],
+            "responses": [
+                "Yes, you're welcome to visit the guidance office.", "The office is located beside the clinic.",
+                "We offer counseling, support, and referrals.", "Everything you share is confidential.",
+                "Walk-ins are accepted, but appointments are better.", "You may talk to Ms. Santos, our guidance counselor.",
+                "Students can schedule counseling sessions online.", "Feel free to report bullying or personal concerns.",
+                "You don’t need to be in trouble to visit.", "We’re here to listen and help students feel safe.",
+                "Stress and anxiety support is available.", "The office is open 8:00 AM to 4:00 PM.",
+                "Teachers may refer students for counseling.", "Parents can speak to the counselor with a request.",
+                "Just ask for a guidance pass from your adviser.", "Group counseling sessions happen monthly.",
+                "Career talks are organized by the office too.", "Students can speak directly to the counselor.",
+                "Come to guidance if you need someone to talk to.", "Guidance is for all students, not just for discipline."
+            ]
+        },
+        {
+            "tag": "school_rules", #tag 11
+            "patterns": [
+                "What are the school rules?", "Can I use my phone in class?",
+                "Are we allowed to wear makeup?", "Do we need to wear an ID?",
+                "Is there a rulebook?", "Can we leave early from class?",
+                "What happens if I break a rule?", "Is there detention in school?",
+                "Can I wear slippers to school?", "Do I need to be in full uniform?",
+                "Are gadgets allowed during break?", "What is the policy on absences?",
+                "How do I get a gate pass?", "Is there a curfew after class?",
+                "Can I eat inside the classroom?", "What time should I go home?",
+                "Do I need a hall pass?", "What is the punishment for cheating?",
+                "Can I bring a pet to school?", "Is vandalism allowed?"
+            ],
+            "responses": [
+                "Students must follow the student handbook rules.", "Phone use is only allowed during breaks.",
+                "Makeup should be light and school-appropriate.", "Wearing your ID at all times is required.",
+                "Slippers and sandals are not allowed.", "Cheating and dishonesty are strictly prohibited.",
+                "Eating inside the classroom is not allowed.", "Gate passes are issued only by advisers.",
+                "Classrooms must be kept clean and orderly.", "Uniform checks happen randomly.",
+                "Punctuality is expected every day.", "Misbehavior may lead to detention or parent calls.",
+                "Absences must be justified with a letter or form.", "Students are released only after 4:00 PM.",
+                "Noise must be kept down during class.", "Pets are not allowed on campus.",
+                "The guidance office handles discipline issues.", "Vandalism is a serious offense.",
+                "Gadgets should be used for learning only.", "Follow all announcements and posted rules."
+            ]
+        },
+        {
+            "tag": "greetings", #tag 12
+            "patterns": [
+                 "Hello", "Hi",
+                 "Hey", "Good morning",
+                 "Good afternoon", "Good evening",
+                 "Hi there!", "What's up?",
+                 "How are you?", "Hey there!",
+                 "Yo", "Greetings!",
+                 "Nice to meet you", "Hi School Bot",
+                 "Is anyone there?", "Hello, anyone?",
+                 "Howdy!","Hey buddy",
+                 "Morning", "Afternoon"
+            ],
+            "responses": [
+                "Hello! How can I help you today?", "Hi there! Need help with something?",
+                "Hey! What can I do for you?", "Good day! Ask me anything about school.",
+                "Hi! I'm here to help you.", "Hello! Feel free to ask your question.",
+                "Greetings! What would you like to know?", "Hi! Do you need information about school?",
+                "Hey! I'm listening.", "Welcome! Let me know how I can assist.",
+                "Hi, student! Ask away.", "Hey! What do you need help with?",
+                "Nice to see you here!", "Hello! I'm School Bot.",
+                "Hi! Looking for something?", "Hey! Let’s get started.",
+                "Yo! I’m ready when you are.", "Hi there! Ask me about school stuff.",
+                "Hello! What’s your question?", "Hi again! Let me know how I can assist."
+            ]
+        },
+        {
+            "tag": "goodbye", #tag 13
+            "patterns": [
+                "Goodbye", "Bye",
+                "See you later", "Talk to you soon",
+                "I’m leaving", "Catch you later",
+                "Bye bye", "Later!",
+                "I’m done", "See ya",
+                "Peace out", "Okay, goodbye",
+                "Thanks, bye", "I’ll go now",
+                "Gotta go", "I’m signing off",
+                "See you tomorrow", "Bye for now",
+                "Catch you next time", "I'm logging off"
+            ],
+            "responses": [
+                "Goodbye! Have a great day!", "See you next time!",
+                "Bye! Don’t forget to study!", "Take care and stay safe!",
+                "Catch you later!", "See you soon!",
+                "Bye for now!", "Hope I was helpful!",
+                "See you around!", "Thanks for chatting!",
+                "Goodbye, student!", "Talk to you again soon!",
+                "Bye! Come back anytime!", "Until next time!",
+                "All the best!", "Take care, okay?",
+                "It was nice helping you!", "Farewell!",
+                "Don’t forget to smile!", "Wishing you a great day!"
+            ]
+        },
+       {
+            "tag": "thanks", #tag 14
+            "patterns": [
+                "Thank you", "Thanks",
+                "Thanks a lot", "Thank you so much",
+                "I appreciate it", "Thanks for your help",
+                "I’m grateful", "Much appreciated",
+                "Thank you very much", "Big thanks!",
+                "Thanks buddy", "Cheers!",
+                "Thanks for the info", "Appreciate the help",
+                "Thank you again", "Thanks a bunch",
+                "That helps a lot", "I owe you one",
+                "Thank you kindly", "Salamat"
+            ],
+            "responses": [
+                "You're very welcome!", "Glad I could help!",
+                "No problem at all!", "Anytime!",
+                "You’re welcome!", "Happy to help!",
+                "Don’t mention it!", "I'm always here for you.",
+                "It’s my pleasure!", "Glad to assist!",
+                "You're welcome anytime!", "That’s what I’m here for!",
+                "Feel free to ask again!", "Thank you too!",
+                "You're most welcome!", "I appreciate your thanks!",
+                "My pleasure!", "Always happy to help!",
+                "You're awesome!", "Cheers!"
+            ]
+        },
+        {
+            "tag": "no_answer", #tag 15
+            "patterns": [
+                "What is the meaning of life?", "Do aliens exist?",
+                "How does a car engine work?", "Tell me a joke",
+                "What is your favorite color?", "How tall is Mount Everest?",
+                "What's the capital of Mars?", "Can you cook for me?",
+                "What's your name again?", "Where's the nearest mall?",
+                "What do you think of AI?", "Do you like pizza?",
+                "Can you help me win the lottery?", "What's your favorite movie?",
+                "Do you dream?", "Tell me a story",
+                "What's your favorite subject?", "Who made you?",
+                "Can you do my homework?", "Where are you from?"
+            ],
+            "responses": [
+                "I’m not sure how to answer that. Try asking something about school!", "Sorry, I’m not programmed to answer that question.",
+                "Let’s focus on school-related questions!", "Hmm, that’s outside of my knowledge.",
+                "I’m only good with school-related topics!", "That question is a bit tricky for me.",
+                "I don't know that one. Try asking about classes or enrollment.", "Let’s keep the topic about school!",
+                "I wish I could answer that, but I can't.", "Try asking me something related to school activities.",
+                "I'm still learning, and I don’t know that yet.", "Oops! That’s outside of my abilities.",
+                "Maybe try your teacher for that question!", "Let’s get back to school stuff!",
+                "Sorry, can’t help with that!", "I'm not sure what you mean. Try rephrasing?",
+                "That’s a cool question, but ask me about school instead!", "I don’t have an answer for that, but I’m here for school help!",
+                "Hmm, that’s not in my handbook.", "Interesting! But I focus on student FAQs."
+            ]
+        }
+    ]
+}
+
+# Step 2: Preprocessing
+lemmatizer = WordNetLemmatizer()
+
+words = []
+classes = []
+documents = []
+ignore_words = ["?", "!"]
+
+for intent in data["intents"]:
+    for pattern in intent["patterns"]:
+        word_list = word_tokenize(pattern)
+        words.extend(word_list)
+        documents.append((word_list, intent["tag"]))
+        if intent["tag"] not in classes:
+            classes.append(intent["tag"])
+
+words = [lemmatizer.lemmatize(w.lower()) for w in words if w not in ignore_words]
+words = sorted(set(words))
+
+classes = sorted(set(classes))
+
+words
+
+classes
+
+# Save words and classes
+pickle.dump(words, open("words.pkl", "wb"))
+pickle.dump(classes, open("classes.pkl", "wb"))
+
+# Create training data
+training = []
+output_empty = [0] * len(classes)
+
+for doc in documents:
+    bag = []
+    word_patterns = doc[0]
+    word_patterns = [lemmatizer.lemmatize(w.lower()) for w in word_patterns]
+    for w in words:
+        bag.append(1) if w in word_patterns else bag.append(0)
+
+    output_row = list(output_empty)
+    output_row[classes.index(doc[1])] = 1
+    training.append([bag, output_row])
+
+random.shuffle(training)
+training = np.array(training, dtype=object)
+
+train_x = np.array(list(training[:, 0]))
+train_y = np.array(list(training[:, 1]))
+
+word_patterns
+
+bag
+
+train_x
+
+train_y
+
+# Step 3: Build Model
+model = Sequential()
+model.add(Dense(128, input_shape=(len(train_x[0]),), activation="relu"))
+model.add(Dropout(0.5))
+model.add(Dense(64, activation="relu"))
+model.add(Dropout(0.5))
+model.add(Dense(len(train_y[0]), activation="softmax"))
+
+sgd = SGD(learning_rate=0.01, momentum=0.9, nesterov=True)
+model.compile(loss="categorical_crossentropy", optimizer=sgd, metrics=["accuracy"])
+
+model.fit(train_x, train_y, epochs=200, batch_size=5, verbose=1)
+model.save("chatbot_model.h5")
+
+def clean_up_sentence(sentence):
+    sentence_words = word_tokenize(sentence)
+    sentence_words = [lemmatizer.lemmatize(word.lower()) for word in sentence_words]
+    return sentence_words
+
+def bag_of_words(sentence, words):
+    sentence_words = clean_up_sentence(sentence)
+    bag = [0] * len(words)
+    for s in sentence_words:
+        for i, w in enumerate(words):
+            if w == s:
+                bag[i] = 1
+    return np.array(bag)
+
+def predict_class(sentence, model):
+    bow = bag_of_words(sentence, words)
+    res = model.predict(np.array([bow]))[0]
+    ERROR_THRESHOLD = 0.25
+    results = [[i, r] for i, r in enumerate(res) if r > ERROR_THRESHOLD]
+    results.sort(key=lambda x: x[1], reverse=True)
+    return_list = [{"intent": classes[r[0]], "probability": str(r[1])} for r in results]
+    return return_list
+
+def get_response(intents_list, intents_json):
+    tag = intents_list[0]["intent"]
+    for i in intents_json["intents"]:
+        if i["tag"] == tag:
+            return random.choice(i["responses"])
+
+# Test the chatbot
+print("Chatbot is ready to talk! Type 'quit' to exit.")
+while True:
+    message = input("You: ")
+    if message.lower() == "quit":
+        break
+    ints = predict_class(message, model)
+    res = get_response(ints, data)
+    print(f"Simple Chatbot: {res}")
+
