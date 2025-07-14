@@ -1,0 +1,386 @@
+
+/* ========== Base ========== */
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* ========== Body & Background ========== */
+body {
+  background: url("/static/images/bg3.jpg") no-repeat center center fixed;
+  background-size: cover;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* ========== Main Chat Box ========== */
+.chat-container {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  width: 90%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ========== Header Bar ========== */
+.chat-header {
+  background: #800000; /* Maroon */
+  color: white;
+  padding: 20px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.chat-header img {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+}
+
+/* ========== Message Display Area ========== */
+.chat-messages {
+  height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 15px;
+  background: #fdf7f7; /* Soft blush background */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== Message Bubbles ========== */
+.message {
+  max-width: 80%;
+  padding: 10px 15px;
+  margin: 10px 0;
+  border-radius: 20px;
+  position: relative;
+  display: inline-block;
+  word-wrap: break-word;
+}
+
+.user {
+  background: transparent !important;
+  align-self: flex-end;
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+.bot {
+  background: #f5e4e4; /* Light dusty rose */
+  color: #000;
+  align-self: flex-start;
+  border-top-left-radius: 0;
+  margin-right: auto;
+}
+
+/* ========== Input Box and Send Button ========== */
+.chat-input {
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid #eee;
+  background: #fff;
+}
+
+.chat-input input {
+  flex: 1;
+  padding: 10px 15px;
+  border-radius: 25px;
+  border: 1px solid #ccc;
+  outline: none;
+  background-color: #fff0f0; /* Soft pink input */
+}
+
+.chat-input button {
+  padding: 10px 20px;
+  margin-left: 10px;
+  border: none;
+  border-radius: 25px;
+  background: #800000; /* Maroon button */
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.chat-input button:hover {
+  background: #660000; /* Darker maroon on hover */
+}
+
+/* ========== Typing Animation ========== */
+.typing {
+  font-style: italic;
+  color: #999;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.5; }
+}
+
+/* Timestamp inside message bubble */
+.timestamp {
+  display: block;
+  font-size: 0.75em;
+  color: #555;
+  margin-top: 4px;
+  text-align: right;
+}
+
+/* ========== Dark Mode (Optional) ========== */
+body.dark {
+  background: #121212;
+}
+
+body.dark .chat-container {
+  background: #1e1e1e;
+  color: #eee;
+}
+
+body.dark .chat-header {
+  background: #330000;
+  color: #fff;
+}
+
+body.dark .chat-messages {
+  background: #1e1e1e;
+}
+
+body.dark .user {
+  background: #5d1a1a;
+  color: #fff;
+}
+
+body.dark .bot {
+  background: #333;
+  color: #eee;
+}
+
+body.dark .chat-input {
+  background: #222;
+  border-top: 1px solid #444;
+}
+
+body.dark .chat-input input {
+  background: #333;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+body.dark .chat-input button {
+  background: #800000;
+  color: white;
+}
+
+
+/* Light/Dark mode header */
+.chat-header {
+  background: #800000; /* Deep maroon */
+  color: white;
+}
+
+/* Send button */
+.chat-input button {
+  background: #800000;
+}
+
+.chat-input button:hover {
+  background: #a52a2a; /* Lighter maroon */
+}
+
+.switch {
+  font-size: 17px;
+  position: relative;
+  display: inline-block;
+  width: 4em;
+  height: 2.2em;
+  border-radius: 30px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #2a2a2a;
+  transition: 0.4s;
+  border-radius: 30px;
+  overflow: hidden;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 1.2em;
+  width: 1.2em;
+  border-radius: 20px;
+  left: 0.5em;
+  bottom: 0.5em;
+  transition: 0.4s;
+  transition-timing-function: cubic-bezier(0.81, -0.04, 0.38, 1.5);
+  box-shadow: inset 8px -4px 0px 0px #fff;
+}
+
+.switch input:checked + .slider {
+  background-color: #00a6ff;
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(1.8em);
+  box-shadow: inset 15px -4px 0px 15px #ffcf48;
+}
+
+.star {
+  background-color: #fff;
+  border-radius: 50%;
+  position: absolute;
+  width: 5px;
+  transition: all 0.4s;
+  height: 5px;
+}
+
+.star_1 {
+  left: 2.5em;
+  top: 0.5em;
+}
+
+.star_2 {
+  left: 2.2em;
+  top: 1.2em;
+}
+
+.star_3 {
+  left: 3em;
+  top: 0.9em;
+}
+
+.switch input:checked + .slider .star {
+  opacity: 0;
+}
+
+.cloud {
+  width: 3.5em;
+  position: absolute;
+  bottom: -1.4em;
+  left: -1.1em;
+  opacity: 0;
+  transition: all 0.4s;
+}
+
+.switch input:checked + .slider .cloud {
+  opacity: 1;
+}
+
+.chat-title {
+  font-family: "Winky Rough", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+
+  font-size: 24px;         /* 👈 Change size here */
+  letter-spacing: 2px;     /* 👈 Add spacing between letters */
+}
+
+
+
+/* Bot message container */
+/* Make sure the wrapper has no background */
+.bot-message-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 8px;
+  max-width: 100%; /* 🔁 CHANGED from 85% to 100% */
+  background: transparent;
+  flex-wrap: nowrap; /* ✅ ADD THIS LINE */
+}
+
+
+/* Bot avatar (outside the bubble) */
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-top: auto;
+  background: transparent; /* 👈 no background box */
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Bot text bubble */
+.bot .bubble {
+  background: #f5e4e4;
+  color: #000;
+  padding: 8px 14px;
+  border-radius: 18px;
+  max-width: 100%;
+  display: inline-block;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  white-space: normal; /* ✅ This line only */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+
+
+/* User's chat bubble */
+.user-bubble {
+  background: #ffd5d5;
+  color: #000;
+  padding: 8px 14px;
+  border-radius: 18px;
+  max-width: 100%;
+  margin-left: auto;
+  margin-bottom: 8px;
+  display: inline-block;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  white-space: normal; /* ✅ This line only */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  position: relative;
+}
+/* Make sure timestamp inside student bubble looks right */
+/* Ensure timestamp looks correct */
+.user-bubble .timestamp {
+  display: block;
+  font-size: 0.75em;
+  color: #555;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.message.bot {
+  background: none !important;   /* 🧽 Remove any background */
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  border: none;
+  box-shadow: none;
+}
